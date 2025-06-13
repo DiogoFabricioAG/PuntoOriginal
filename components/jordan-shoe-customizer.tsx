@@ -46,7 +46,11 @@ function Shoe() {
     const auto = `<svg width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255, 255, 255, 0.5)" d="M29.5 54C43.031 54 54 43.031 54 29.5S43.031 5 29.5 5 5 15.969 5 29.5 15.969 54 29.5 54z" stroke="#000"/><path d="M2 2l11 2.947L4.947 13 2 2z" fill="#000"/></svg>`
     if (hovered) {
       document.body.style.cursor = `url('data:image/svg+xml;base64,${btoa(cursor)}'), auto`
-      return () => (document.body.style.cursor = `url('data:image/svg+xml;base64,${btoa(auto)}'), auto`)
+      return () => {
+        document.body.style.cursor = `url('data:image/svg+xml;base64,${btoa(auto)}'), auto`
+      }
+    } else {
+      document.body.style.cursor = `url('data:image/svg+xml;base64,${btoa(auto)}'), auto`
     }
   }, [hovered])
 
