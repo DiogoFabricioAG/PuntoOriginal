@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Palette, RotateCcw, Save, Share2, ShoppingCart, Eye, ImageIcon, Download, Heart } from "lucide-react"
 import { ShoeViewer } from "@/components/shoe-viewer"
+import { JordanShoeCustomizer } from "@/components/jordan-shoe-customizer"
 
 // Importar imágenes de zapatillas
 import blanca1Img from "@/assets/zapatillas/Blanca1.jpg"
@@ -28,6 +29,7 @@ export default function PersonalizarPage() {
   const [customText, setCustomText] = useState("")
   const [currentPrice, setCurrentPrice] = useState(89.99)
   const [viewMode, setViewMode] = useState("3d")
+  const [modelType, setModelType] = useState("normal") // "normal" o "jordan"
 
   const modelos = [
     {
@@ -138,6 +140,8 @@ export default function PersonalizarPage() {
     setCurrentPrice(newPrice);
   }
 
+  const [activeTab, setActiveTab] = useState("modelo")
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}
@@ -187,9 +191,10 @@ export default function PersonalizarPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Tabs defaultValue="modelo" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="modelo">Modelo</TabsTrigger>
+                    <TabsTrigger value="jordan">3D</TabsTrigger>
                     <TabsTrigger value="colores">Colores</TabsTrigger>
                     <TabsTrigger value="texto">Texto</TabsTrigger>
                     <TabsTrigger value="extras">Extras</TabsTrigger>
@@ -249,6 +254,51 @@ export default function PersonalizarPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="jordan" className="space-y-4">
+                    <div>
+                      <Label className="text-base font-medium">Modelo 3D</Label>
+                      <div className="grid gap-3 mt-2">
+                        <div 
+                          onClick={() => {
+                            // Actualizar el estado para mostrar el modelo Jordan
+                            setModelType("jordan");
+                            // Actualizar el precio para el modelo Jordan
+                            setCurrentPrice(189.99);
+                          }}
+                          className={`p-3 border rounded-lg cursor-pointer transition-all border-orange-500 bg-orange-50`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-[60px] h-[60px] bg-gray-100 rounded-md flex items-center justify-center">
+                              <Palette className="w-6 h-6 text-gray-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-medium">Vista 3d</h3>
+                              <p className="text-sm text-gray-600">Edición Premium</p>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="font-semibold">$189.99</span>
+                                <Badge variant="default">
+                                  Exclusivo
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Haz clic en el modelo 3D para personalizar cada parte de forma independiente
+                      </p>
+                      <div className="mt-4">
+                        <p className="text-sm text-gray-700 font-medium">Instrucciones:</p>
+                        <ul className="text-xs text-gray-600 space-y-1 mt-1">
+                          <li>1. Haz clic en cualquier parte de la zapatilla para seleccionarla</li>
+                          <li>2. Usa el selector de color para cambiar el color de esa parte</li>
+                          <li>3. Personaliza tantas partes como desees</li>
+                          <li>4. Utiliza el botón &quot;Guardar diseño&quot; para descargar tu creación</li>
+                        </ul>
+                      </div>
                     </div>
                   </TabsContent>
 
@@ -435,7 +485,11 @@ export default function PersonalizarPage() {
               </CardHeader>
               <CardContent>
                 <div className="relative bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
-                  {viewMode === "3d" ? (
+                  {activeTab === "jordan" ? (
+                    <div className="w-full h-full aspect-square overflow-hidden">
+                      <JordanShoeCustomizer />
+                    </div>
+                  ) : viewMode === "3d" ? (
                     <div className="w-full h-full aspect-square">
                       <ShoeViewer 
                         color={selectedColor} 
@@ -453,13 +507,15 @@ export default function PersonalizarPage() {
                       style={{ filter: `hue-rotate(${selectedColor === "#FF6B35" ? "0" : "180"}deg)` }}
                     />
                   )}
-                  {customText && (
+                  {customText && activeTab !== "jordan" && (
                     <div className="absolute bottom-4 right-4 bg-black/70 text-white px-2 py-1 rounded text-sm">
                       {customText}
                     </div>
                   )}
                   <div className="absolute top-4 left-4">
-                    <Badge className="bg-white text-gray-900">Talla {selectedSize}</Badge>
+                    <Badge className="bg-white text-gray-900">
+                      {activeTab === "jordan" ? "Vista 3D" : `Talla ${selectedSize}`}
+                    </Badge>
                   </div>
                 </div>
 
@@ -488,26 +544,45 @@ export default function PersonalizarPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Modelo base ({modelos.find((m) => m.id === selectedModel)?.name})</span>
-                    <span>${modelos.find((m) => m.id === selectedModel)?.basePrice.toFixed(2)}</span>
-                  </div>
-                  {colores.find((c) => c.value === selectedColor)?.premium && (
+                  {activeTab === "jordan" ? (
                     <div className="flex justify-between">
-                      <span>Color premium ({colores.find((c) => c.value === selectedColor)?.name})</span>
-                      <span>$25.00</span>
+                      <span>Vista Personalizado</span>
+                      <span>$189.99</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span>Modelo base ({modelos.find((m) => m.id === selectedModel)?.name})</span>
+                      <span>${modelos.find((m) => m.id === selectedModel)?.basePrice.toFixed(2)}</span>
                     </div>
                   )}
-                  {customText && (
+                  {!activeTab.includes("jordan") && (
+                    <>
+                      {colores.find((c) => c.value === selectedColor)?.premium && (
+                        <div className="flex justify-between">
+                          <span>Color premium ({colores.find((c) => c.value === selectedColor)?.name})</span>
+                          <span>$25.00</span>
+                        </div>
+                      )}
+                      {customText && (
+                        <div className="flex justify-between">
+                          <span>Texto personalizado</span>
+                          <span>$15.00</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {activeTab === "jordan" && (
                     <div className="flex justify-between">
-                      <span>Texto personalizado</span>
-                      <span>$15.00</span>
+                      <span>Personalización multicolor</span>
+                      <span>Incluido</span>
                     </div>
                   )}
                   <div className="border-t pt-2">
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Total</span>
-                      <span className="text-orange-600">${currentPrice.toFixed(2)}</span>
+                      <span className="text-orange-600">
+                        ${activeTab === "jordan" ? "189.99" : currentPrice.toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -515,10 +590,20 @@ export default function PersonalizarPage() {
                 <div className="space-y-2">
                   <h4 className="font-medium">Especificaciones:</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Modelo: {modelos.find((m) => m.id === selectedModel)?.name}</li>
-                    <li>• Talla: {selectedSize}</li>
-                    <li>• Color: {colores.find((c) => c.value === selectedColor)?.name}</li>
-                    {customText && <li>• Texto: &quot;{customText}&quot;</li>}
+                    {activeTab === "jordan" ? (
+                      <>
+                        <li>• Modelo: Air Jordan Personalizado</li>
+                        <li>• Tipo: Premium Multicolor</li>
+                        <li>• Personalización: Colores por parte</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Modelo: {modelos.find((m) => m.id === selectedModel)?.name}</li>
+                        <li>• Talla: {selectedSize}</li>
+                        <li>• Color: {colores.find((c) => c.value === selectedColor)?.name}</li>
+                        {customText && <li>• Texto: &quot;{customText}&quot;</li>}
+                      </>
+                    )}
                   </ul>
                 </div>
 
