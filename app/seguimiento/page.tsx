@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -11,11 +10,6 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Package, Truck, CheckCircle, Clock, MapPin, Search, Eye, Download, MessageCircle, ShoppingCart } from "lucide-react"
-import dynamic from "next/dynamic"
-import L from "leaflet"
-import Head from 'next/head'
-import { MapContainer, TileLayer, Marker, Polyline, Tooltip } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
 
 interface Order {
   id: string
@@ -40,38 +34,96 @@ interface Order {
   }[]
 }
 
-// Iconos personalizados para Leaflet
-const iconCD = new L.Icon({
-  iconUrl: 'https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-blue.png',
-  iconSize: [32, 48],
-  iconAnchor: [16, 48], popupAnchor: [0, -40]
-})
-const iconDestino = new L.Icon({
-  iconUrl: 'https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-green.png',
-  iconSize: [32, 48], iconAnchor: [16, 48], popupAnchor: [0, -40]
-})
-const iconPaquete = new L.DivIcon({
-  className: 'custom-paquete-icon',
-  html: `<div style='background:#f59e42;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px #0002;'><svg width='20' height='20' fill='white' viewBox='0 0 24 24'><path d='M3 7l9-4 9 4-9 4-9-4zm0 2.18v7.02c0 1.1.9 2 2 2h2v-7.02l-4-1.68zm16 9.02c1.1 0 2-.9 2-2v-7.02l-4 1.68v7.02h2zm-6 0h2v-7.02l-2-.84-2 .84v7.02h2z'></path></svg></div>`
-})
+// Componente de mapa SVG personalizado - Totalmente compatible con SSR
+const SVGTrackingMap = ({ mapPoints }: { 
+  mapPoints: {
+    centro: { lat: number, lng: number }
+    destino: { lat: number, lng: number }
+    paquete: { lat: number, lng: number }
+  } | null
+}) => {
+  if (!mapPoints) return null;
+  
+  // Mapeamos las coordenadas a un espacio SVG de 400x400
+  // Ajustamos el sistema de coordenadas para que coincida con nuestra visualización
+  const mapBounds = {
+    minLat: Math.min(mapPoints.centro.lat, mapPoints.destino.lat, mapPoints.paquete.lat) - 0.01,
+    maxLat: Math.max(mapPoints.centro.lat, mapPoints.destino.lat, mapPoints.paquete.lat) + 0.01,
+    minLng: Math.min(mapPoints.centro.lng, mapPoints.destino.lng, mapPoints.paquete.lng) - 0.01,
+    maxLng: Math.max(mapPoints.centro.lng, mapPoints.destino.lng, mapPoints.paquete.lng) + 0.01,
+  };
 
-// Componente Leaflet sin SSR
-const MapWithMarkers = dynamic(() => Promise.resolve(({ mapPoints }: { mapPoints: any }) => {
-  if (!mapPoints) return null
-  const center: [number, number] = [
-    (mapPoints.centro.lat + mapPoints.destino.lat) / 2,
-    (mapPoints.centro.lng + mapPoints.destino.lng) / 2
-  ]
+  // Función para convertir lat/lng a coordenadas SVG
+  const latLngToSvgPoint = (lat: number, lng: number) => {
+    const svgWidth = 400;
+    const svgHeight = 400;
+    
+    // Invierte el eje Y para que norte sea arriba (lat más alta = Y más baja)
+    const x = ((lng - mapBounds.minLng) / (mapBounds.maxLng - mapBounds.minLng)) * svgWidth;
+    const y = svgHeight - ((lat - mapBounds.minLat) / (mapBounds.maxLat - mapBounds.minLat)) * svgHeight;
+    
+    return { x, y };
+  };
+
+  // Convertir puntos a coordenadas SVG
+  const centroPoint = latLngToSvgPoint(mapPoints.centro.lat, mapPoints.centro.lng);
+  const destinoPoint = latLngToSvgPoint(mapPoints.destino.lat, mapPoints.destino.lng);
+  const paquetePoint = latLngToSvgPoint(mapPoints.paquete.lat, mapPoints.paquete.lng);
+
+  // Crear la URL para el iframe de Google Maps centrado en el paquete
+  const googleMapsUrl = `https://maps.google.com/maps?q=${mapPoints.paquete.lat},${mapPoints.paquete.lng}&z=13&output=embed`;
+  
   return (
-    <MapContainer center={center} zoom={12.5} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-      <TileLayer url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' attribution='&copy; OpenStreetMap contributors' />
-      <Marker position={[mapPoints.centro.lat, mapPoints.centro.lng]} icon={iconCD}><Tooltip permanent>Centro de Distribución</Tooltip></Marker>
-      <Marker position={[mapPoints.destino.lat, mapPoints.destino.lng]} icon={iconDestino}><Tooltip permanent>Destino</Tooltip></Marker>
-      <Marker position={[mapPoints.paquete.lat, mapPoints.paquete.lng]} icon={iconPaquete}><Tooltip permanent>Paquete</Tooltip></Marker>
-      <Polyline positions={[[mapPoints.centro.lat, mapPoints.centro.lng],[mapPoints.paquete.lat, mapPoints.paquete.lng],[mapPoints.destino.lat, mapPoints.destino.lng]]} color='#3B82F6' weight={5} dashArray='10,8'/>
-    </MapContainer>
-  )
-}), { ssr: false })
+    <div className="relative w-full h-full">
+      {/* Google Maps iframe como fondo */}
+      <iframe 
+        src={googleMapsUrl}
+        className="absolute inset-0 w-full h-full rounded-lg z-0"
+        frameBorder="0"
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        allowFullScreen
+        title="Google Maps"
+      ></iframe>
+      
+      {/* Capa SVG con marcadores y animaciones */}
+      <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+        <svg width="100%" height="100%" viewBox="0 0 400 400" style={{ background: 'transparent' }}>
+          {/* Líneas de ruta */}
+          <path 
+            d={`M ${centroPoint.x},${centroPoint.y} L ${paquetePoint.x},${paquetePoint.y} L ${destinoPoint.x},${destinoPoint.y}`} 
+            stroke="#3B82F6" 
+            strokeWidth="3" 
+            strokeDasharray="10,5" 
+            fill="none" 
+          />
+          
+          {/* Centro de Distribución */}
+          <g transform={`translate(${centroPoint.x - 15}, ${centroPoint.y - 30})`}>
+            <path d="M15 30L30 30 30 15 15 0 0 15 0 30z" fill="#1e40af" />
+            <circle cx="15" cy="15" r="6" fill="white" />
+            <text x="15" y="45" textAnchor="middle" fill="#1e40af" fontWeight="bold" fontSize="12">CD</text>
+          </g>
+          
+          {/* Destino */}
+          <g transform={`translate(${destinoPoint.x - 15}, ${destinoPoint.y - 30})`}>
+            <path d="M15 30L30 30 30 15 15 0 0 15 0 30z" fill="#15803d" />
+            <circle cx="15" cy="15" r="6" fill="white" />
+            <text x="15" y="45" textAnchor="middle" fill="#15803d" fontWeight="bold" fontSize="12">Destino</text>
+          </g>
+          
+          {/* Paquete (animado) */}
+          <g transform={`translate(${paquetePoint.x - 15}, ${paquetePoint.y - 15})`} className="animate-tracking-pulse">
+            <circle cx="15" cy="15" r="12" fill="#f59e42" />
+            <rect x="9" y="9" width="12" height="12" fill="#f59e42" />
+            <rect x="10" y="10" width="10" height="10" fill="#ffffff" stroke="#f59e42" strokeWidth="1" />
+            <text x="15" y="40" textAnchor="middle" fill="#f59e42" fontWeight="bold" fontSize="12">Paquete</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  );
+};
 
 export default function SeguimientoPage() {
   const [trackingNumber, setTrackingNumber] = useState("")
@@ -141,6 +193,8 @@ export default function SeguimientoPage() {
 
   // Cargar pedidos desde localStorage al montar el componente
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const userOrders = JSON.parse(localStorage.getItem('userOrders') || '[]')
     
     // Cargar contador del carrito
@@ -874,124 +928,119 @@ export default function SeguimientoPage() {
         </Tabs>
       </div>
 
-      {/* Modal de Seguimiento con Leaflet */}
+      {/* Modal de Seguimiento con mapa SVG */}
       {showMapModal && selectedOrderForMap && mapPoints && (
-        <>
-          <Head>
-            <link rel='stylesheet' href='https://unpkg.com/leaflet/dist/leaflet.css' />
-          </Head>
-          <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-auto'>
-            <div className='bg-white rounded-xl w-full max-w-6xl max-h-[calc(100vh-1rem)] shadow-2xl flex flex-col'>
-              <div className='p-4 sm:p-6 border-b flex-shrink-0'>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Seguimiento en Tiempo Real</h2>
-                    <p className="text-gray-600 mt-1 text-sm sm:text-base">
-                      Pedido {selectedOrderForMap.id} • {selectedOrderForMap.trackingNumber}
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-auto'>
+          <div className='bg-white rounded-xl w-full max-w-6xl max-h-[calc(100vh-1rem)] shadow-2xl flex flex-col'>
+            <div className='p-4 sm:p-6 border-b flex-shrink-0'>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Seguimiento en Tiempo Real</h2>
+                  <p className="text-gray-600 mt-1 text-sm sm:text-base">
+                    Pedido {selectedOrderForMap.id} • {selectedOrderForMap.trackingNumber}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={closeTrackingMap}
+                  className="rounded-full"
+                >
+                  ✕
+                </Button>
+              </div>
+            </div>
+
+            <div className='p-6'>
+              <div className='grid lg:grid-cols-3 gap-6'>
+                {/* Información del envío */}
+                <div className='space-y-4'>
+                  <div className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4'>
+                    <div className='flex items-center space-x-2 mb-3'>
+                      <Truck className="w-5 h-5 text-blue-600" />
+                      <h3 className="font-semibold text-blue-900">Estado Actual</h3>
+                    </div>
+                    <p className="text-blue-700 font-medium">{selectedOrderForMap.status}</p>
+                    <p className="text-blue-600 text-sm mt-1">
+                      Última actualización: {new Date().toLocaleTimeString()}
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={closeTrackingMap}
-                    className="rounded-full"
-                  >
-                    ✕
-                  </Button>
+
+                  <div className='bg-green-50 rounded-lg p-4'>
+                    <div className='flex items-center space-x-2 mb-3'>
+                      <MapPin className="w-5 h-5 text-green-600" />
+                      <h3 className="font-semibold text-green-900">Ubicación Actual</h3>
+                    </div>
+                    <p className="text-green-700 font-medium">Centro de Distribución Lima Norte</p>
+                    <p className="text-green-600 text-sm mt-1">
+                      Av. Túpac Amaru 123, Los Olivos
+                    </p>
+                  </div>
+
+                  <div className='bg-orange-50 rounded-lg p-4'>
+                    <div className='flex items-center space-x-2 mb-3'>
+                      <Clock className="w-5 h-5 text-orange-600" />
+                      <h3 className="font-semibold text-orange-900">Tiempo Estimado</h3>
+                    </div>
+                    <p className="text-orange-700 font-medium">2-3 horas</p>
+                    <p className="text-orange-600 text-sm mt-1">
+                      Llegada estimada: {new Date(Date.now() + 3 * 60 * 60 * 1000).toLocaleTimeString()}
+                    </p>
+                  </div>
+
+                  <div className='bg-gray-50 rounded-lg p-4'>
+                    <h4 className="font-semibold text-gray-900 mb-2">Productos en tránsito:</h4>
+                    {selectedOrderForMap.items.map((item, index) => (
+                      <div key={index} className="text-sm text-gray-600">
+                        • {item.name} (Cantidad: {item.quantity})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mapa interactivo con SVG */}
+                <div className='lg:col-span-2'>
+                  <div style={{ height: 400, width: '100%' }} className='rounded-lg overflow-hidden'>
+                    <SVGTrackingMap mapPoints={mapPoints} />
+                  </div>
+                  {/* Ruta estimada */}
+                  <div className="mt-4 bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">Ruta de Entrega</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-green-700 font-medium">Centro de Distribución (Origen)</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-blue-700 font-medium">En tránsito - Av. Javier Prado</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                        <span className="text-gray-500">Tu dirección (Destino)</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className='p-6'>
-                <div className='grid lg:grid-cols-3 gap-6'>
-                  {/* Información del envío */}
-                  <div className='space-y-4'>
-                    <div className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4'>
-                      <div className='flex items-center space-x-2 mb-3'>
-                        <Truck className="w-5 h-5 text-blue-600" />
-                        <h3 className="font-semibold text-blue-900">Estado Actual</h3>
-                      </div>
-                      <p className="text-blue-700 font-medium">{selectedOrderForMap.status}</p>
-                      <p className="text-blue-600 text-sm mt-1">
-                        Última actualización: {new Date().toLocaleTimeString()}
-                      </p>
-                    </div>
-
-                    <div className='bg-green-50 rounded-lg p-4'>
-                      <div className='flex items-center space-x-2 mb-3'>
-                        <MapPin className="w-5 h-5 text-green-600" />
-                        <h3 className="font-semibold text-green-900">Ubicación Actual</h3>
-                      </div>
-                      <p className="text-green-700 font-medium">Centro de Distribución Lima Norte</p>
-                      <p className="text-green-600 text-sm mt-1">
-                        Av. Túpac Amaru 123, Los Olivos
-                      </p>
-                    </div>
-
-                    <div className='bg-orange-50 rounded-lg p-4'>
-                      <div className='flex items-center space-x-2 mb-3'>
-                        <Clock className="w-5 h-5 text-orange-600" />
-                        <h3 className="font-semibold text-orange-900">Tiempo Estimado</h3>
-                      </div>
-                      <p className="text-orange-700 font-medium">2-3 horas</p>
-                      <p className="text-orange-600 text-sm mt-1">
-                        Llegada estimada: {new Date(Date.now() + 3 * 60 * 60 * 1000).toLocaleTimeString()}
-                      </p>
-                    </div>
-
-                    <div className='bg-gray-50 rounded-lg p-4'>
-                      <h4 className="font-semibold text-gray-900 mb-2">Productos en tránsito:</h4>
-                      {selectedOrderForMap.items.map((item, index) => (
-                        <div key={index} className="text-sm text-gray-600">
-                          • {item.name} (Cantidad: {item.quantity})
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Mapa interactivo con Leaflet */}
-                  <div className='lg:col-span-2'>
-                    <div style={{ height: 400, width: '100%' }} className='rounded-lg overflow-hidden'>
-                      <MapWithMarkers mapPoints={mapPoints} />
-                    </div>
-                    {/* Ruta estimada */}
-                    <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                      <h4 className="font-semibold text-gray-900 mb-3">Ruta de Entrega</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                          <span className="text-green-700 font-medium">Centro de Distribución (Origen)</span>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                          <span className="text-blue-700 font-medium">En tránsito - Av. Javier Prado</span>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                          <span className="text-gray-500">Tu dirección (Destino)</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              {/* Botones de acción */}
+              <div className="mt-6 pt-4 border-t flex justify-between items-center">
+                <div className="text-sm text-gray-500">
+                  Actualización automática cada 30 segundos
                 </div>
-
-                {/* Botones de acción */}
-                <div className="mt-6 pt-4 border-t flex justify-between items-center">
-                  <div className="text-sm text-gray-500">
-                    Actualización automática cada 30 segundos
-                  </div>
-                  <div className="space-x-3">
-                    <Button variant="outline" onClick={closeTrackingMap}>
-                      Cerrar
-                    </Button>
-                    <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
-                      Notificarme cuando llegue
-                    </Button>
-                  </div>
+                <div className="space-x-3">
+                  <Button variant="outline" onClick={closeTrackingMap}>
+                    Cerrar
+                  </Button>
+                  <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+                    Notificarme cuando llegue
+                  </Button>
                 </div>
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
