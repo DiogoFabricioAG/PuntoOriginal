@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,22 @@ import negro1Img from "@/assets/zapatillas/Negro1.jpg"
 import negro1ImgIA from "@/assets/ia/imag2.png"
 import neon1ImgIA from "@/assets/ia/imag1.png"
 import neon1Img from "@/assets/zapatillas/Neon1.jpg"
+import { StaticImageData } from "next/image"
+
+// Tipo para los items del carrito
+interface CartItem {
+  id: string
+  name: string
+  model: string
+  size: string
+  color: string
+  colorName: string
+  customText?: string
+  price: number
+  quantity: number
+  image: StaticImageData
+  isJordan?: boolean
+}
 
 export default function PersonalizarPage() {
   const [selectedModel, setSelectedModel] = useState("classic")
@@ -29,7 +45,7 @@ export default function PersonalizarPage() {
   const [selectedSize, setSelectedSize] = useState("42")
   const [customText, setCustomText] = useState("")
   const [currentPrice, setCurrentPrice] = useState(89.99)
-  const [viewMode, setViewMode] = useState("3d")
+  const [viewMode, setViewMode] = useState("360")
   const [modelType, setModelType] = useState("normal") // "normal" o "jordan"
   
   // Estados para la funcionalidad de IA
@@ -38,6 +54,10 @@ export default function PersonalizarPage() {
   const [imageComparisonStep, setImageComparisonStep] = useState(0) // 0: inicial, 1: procesando, 2: resultado
   const [showEnlargedImage, setShowEnlargedImage] = useState(false)
   const [enlargedImageSrc, setEnlargedImageSrc] = useState("")
+
+  // Estados para funcionalidad del carrito
+  const [showCartSuccess, setShowCartSuccess] = useState(false)
+  const [cartItemCount, setCartItemCount] = useState(0)
 
   const modelos = [
     {
@@ -180,7 +200,62 @@ export default function PersonalizarPage() {
     setCurrentPrice(newPrice);
   }
 
+  const handleAddToCart = () => {
+    // Crear el objeto del producto para el carrito
+    const cartItem = {
+      id: `${selectedModel}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: modelos.find(m => m.id === selectedModel)?.name || "Zapatilla Personalizada",
+      model: selectedModel,
+      size: selectedSize,
+      color: selectedColor,
+      colorName: colores.find(c => c.value === selectedColor)?.name || "Color personalizado",
+      customText: customText || undefined,
+      price: activeTab === "jordan" ? 189.99 : currentPrice,
+      quantity: 1,
+      image: modelos.find(m => m.id === selectedModel)?.image || blanca1Img,
+      isJordan: activeTab === "jordan"
+    }
+
+    // Obtener carrito actual del localStorage
+    const currentCart: CartItem[] = JSON.parse(localStorage.getItem('cartItems') || '[]')
+    
+    // Verificar si ya existe un producto similar
+    const existingItemIndex = currentCart.findIndex((item: CartItem) => 
+      item.model === cartItem.model && 
+      item.size === cartItem.size && 
+      item.color === cartItem.color && 
+      item.customText === cartItem.customText &&
+      item.isJordan === cartItem.isJordan
+    )
+
+    if (existingItemIndex >= 0) {
+      // Si existe, incrementar cantidad
+      currentCart[existingItemIndex].quantity += 1
+    } else {
+      // Si no existe, agregar nuevo item
+      currentCart.push(cartItem)
+    }
+
+    // Guardar en localStorage
+    localStorage.setItem('cartItems', JSON.stringify(currentCart))
+
+    // Actualizar estados locales
+    setCartItemCount(currentCart.reduce((sum: number, item: CartItem) => sum + item.quantity, 0))
+    setShowCartSuccess(true)
+    
+    // Ocultar la notificación después de 5 segundos (más tiempo para interactuar)
+    setTimeout(() => {
+      setShowCartSuccess(false)
+    }, 5000)
+  }
+
   const [activeTab, setActiveTab] = useState("modelo")
+  
+  // Cargar contador del carrito al montar el componente
+  useEffect(() => {
+    const currentCart: CartItem[] = JSON.parse(localStorage.getItem('cartItems') || '[]')
+    setCartItemCount(currentCart.reduce((sum: number, item: CartItem) => sum + item.quantity, 0))
+  }, [])
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
@@ -213,6 +288,12 @@ export default function PersonalizarPage() {
               <Button variant="outline" size="sm">
                 <Share2 className="w-4 h-4 mr-2" />
                 Compartir
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/carrito">
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Carrito ({cartItemCount})
+                </Link>
               </Button>
             </div>
           </div>
@@ -695,7 +776,10 @@ export default function PersonalizarPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Button className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+                  <Button 
+                    className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                    onClick={handleAddToCart}
+                  >
                     <ShoppingCart className="w-4 h-4 mr-2" />
                     Añadir al Carrito
                   </Button>
@@ -924,7 +1008,7 @@ export default function PersonalizarPage() {
                       className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 transition-all duration-200"
                       onClick={() => {
                         closeImageComparison()
-                        // Aquí podrías añadir al carrito automáticamente
+                        handleAddToCart()
                       }}
                     >
                       <ShoppingCart className="w-4 h-4 mr-2" />
@@ -985,6 +1069,35 @@ export default function PersonalizarPage() {
                 <Eye className="w-4 h-4 mr-2" />
                 Imagen generada con IA - Haz clic fuera para cerrar
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notificación de éxito del carrito */}
+      {showCartSuccess && (
+        <div className="fixed top-4 right-4 z-50 animate-cart-success">
+          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-lg shadow-lg max-w-md">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="bg-white/20 rounded-full p-1">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold">¡Producto añadido!</p>
+                <p className="text-sm opacity-90">Tienes {cartItemCount} artículo{cartItemCount !== 1 ? 's' : ''} en tu carrito</p>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              <Button size="sm" variant="outline" className="bg-white/20 border-white/30 text-white hover:bg-white/30" asChild>
+                <Link href="/carrito">
+                  Ver Carrito
+                </Link>
+              </Button>
+              <Button size="sm" variant="outline" className="bg-white/20 border-white/30 text-white hover:bg-white/30" onClick={() => setShowCartSuccess(false)}>
+                Continuar
+              </Button>
             </div>
           </div>
         </div>
