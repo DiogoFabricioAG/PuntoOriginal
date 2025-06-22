@@ -16,10 +16,11 @@ import { JordanShoeCustomizer } from "@/components/jordan-shoe-customizer"
 
 // Importar imágenes de zapatillas
 import blanca1Img from "@/assets/zapatillas/Blanca1.jpg"
-import blanca2Img from "@/assets/zapatillas/Blanca2.jpg" 
+import blanca1ImgIA from "@/assets/ia/imag3.png"
+import imagenInicial from "@/assets/ia/ImagenInicial.png" 
 import negro1Img from "@/assets/zapatillas/Negro1.jpg"
-import negro2Img from "@/assets/zapatillas/Negro2.jpg"
-import azul1Img from "@/assets/zapatillas/Azul1.jpg"
+import negro1ImgIA from "@/assets/ia/imag2.png"
+import neon1ImgIA from "@/assets/ia/imag1.png"
 import neon1Img from "@/assets/zapatillas/Neon1.jpg"
 
 export default function PersonalizarPage() {
@@ -30,6 +31,11 @@ export default function PersonalizarPage() {
   const [currentPrice, setCurrentPrice] = useState(89.99)
   const [viewMode, setViewMode] = useState("3d")
   const [modelType, setModelType] = useState("normal") // "normal" o "jordan"
+  
+  // Estados para la funcionalidad de IA
+  const [showImageComparison, setShowImageComparison] = useState(false)
+  const [isProcessingIA, setIsProcessingIA] = useState(false)
+  const [imageComparisonStep, setImageComparisonStep] = useState(0) // 0: inicial, 1: procesando, 2: resultado
 
   const modelos = [
     {
@@ -86,6 +92,26 @@ export default function PersonalizarPage() {
   ]
 
   const tallas = ["38", "39", "40", "41", "42", "43", "44", "45", "46"]
+
+  // Función para simular el proceso de IA
+  const handleImageUpload = () => {
+    setShowImageComparison(true)
+    setIsProcessingIA(true)
+    setImageComparisonStep(1)
+    
+    // Simular procesamiento de IA
+    setTimeout(() => {
+      setImageComparisonStep(2)
+      setIsProcessingIA(false)
+    }, 2500)
+  }
+
+  // Función para cerrar la comparación
+  const closeImageComparison = () => {
+    setShowImageComparison(false)
+    setImageComparisonStep(0)
+    setIsProcessingIA(false)
+  }
 
   const handleColorChange = (color: string) => {
     setSelectedColor(color)
@@ -192,9 +218,10 @@ export default function PersonalizarPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-5">
+                  <TabsList className="grid w-full grid-cols-6">
                     <TabsTrigger value="modelo">Modelo</TabsTrigger>
                     <TabsTrigger value="jordan">3D</TabsTrigger>
+                    <TabsTrigger value="ia">IA Visual</TabsTrigger>
                     <TabsTrigger value="colores">Colores</TabsTrigger>
                     <TabsTrigger value="texto">Texto</TabsTrigger>
                     <TabsTrigger value="extras">Extras</TabsTrigger>
@@ -298,6 +325,45 @@ export default function PersonalizarPage() {
                           <li>3. Personaliza tantas partes como desees</li>
                           <li>4. Utiliza el botón &quot;Guardar diseño&quot; para descargar tu creación</li>
                         </ul>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="ia" className="space-y-4">
+                    <div>
+                      <Label className="text-base font-medium">Visualización con IA</Label>
+                      <p className="text-sm text-gray-600 mt-1 mb-4">
+                        Sube una imagen y ve cómo te quedarían las zapatillas con tecnología de IA
+                      </p>
+                      
+                      <div className="space-y-4">
+                        <Button 
+                          onClick={handleImageUpload}
+                          className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                          disabled={isProcessingIA}
+                        >
+                          {isProcessingIA ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Procesando con IA...
+                            </>
+                          ) : (
+                            <>
+                              <ImageIcon className="w-4 h-4 mr-2" />
+                              Cargar Imagen y Visualizar
+                            </>
+                          )}
+                        </Button>
+                        
+                        <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
+                          <h4 className="font-medium text-orange-800 mb-2">¿Cómo funciona?</h4>
+                          <ul className="text-sm text-orange-700 space-y-1">
+                            <li>1. Sube una imagen tuya o de tu outfit</li>
+                            <li>2. Nuestra IA analizará el estilo y colores</li>
+                            <li>3. Te mostrará cómo te quedarían las zapatillas</li>
+                            <li>4. Compara diferentes modelos y colores</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </TabsContent>
@@ -634,6 +700,237 @@ export default function PersonalizarPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Comparación de Imágenes con IA */}
+      {showImageComparison && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all duration-300">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                  Visualización con IA
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={closeImageComparison}
+                  className="rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  ✕
+                </Button>
+              </div>
+
+              {imageComparisonStep === 1 && (
+                <div className="text-center py-12">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mx-auto mb-4"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <ImageIcon className="w-6 h-6 text-orange-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Procesando con IA...</h3>
+                  <p className="text-gray-600">Analizando tu imagen y generando la visualización</p>
+                  <div className="mt-4 bg-gray-200 rounded-full h-2 max-w-xs mx-auto overflow-hidden">
+                    <div className="bg-gradient-to-r from-orange-500 to-red-500 h-full rounded-full transition-all duration-1000" style={{width: '75%'}}></div>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+                      <span>Detectando colores dominantes</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <span>Analizando estilo y combinaciones</span>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                      <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      <span>Generando visualización realista</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {imageComparisonStep === 2 && (
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl font-semibold mb-2">¡Visualización Completada!</h3>
+                    <p className="text-gray-600">Aquí tienes cómo te quedarían las zapatillas</p>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {/* Imagen Original */}
+                    <div className="space-y-3">
+                      <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-gray-300 to-gray-400 rounded-lg blur opacity-20 group-hover:opacity-40 transition duration-300"></div>
+                        <div className="relative bg-white rounded-lg p-2 shadow-lg">
+                          <Image
+                            src={imagenInicial}
+                            alt="Imagen Original"
+                            width={300}
+                            height={320}
+                            className="w-full h-80 object-cover rounded-md"
+                          />
+                          <div className="absolute top-3 left-3">
+                            <Badge className="bg-gray-600 text-white">Original</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <h4 className="font-semibold text-center">Tu Imagen</h4>
+                      <p className="text-sm text-gray-600 text-center">Imagen base subida</p>
+                    </div>
+
+                    {/* Imagen con IA - Conectada al modelo seleccionado */}
+                    <div className="space-y-3">
+                      <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-orange-400 to-red-400 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+                        <div className="relative bg-white rounded-lg p-2 shadow-lg">
+                          <Image
+                            src={
+                              selectedModel === "classic" ? blanca1ImgIA : 
+                              selectedModel === "runner" ? negro1ImgIA : 
+                              neon1ImgIA
+                            }
+                            alt="Procesado con IA"
+                            width={300}
+                            height={320}
+                            className="w-full h-80 object-cover rounded-md"
+                          />
+                          <div className="absolute top-3 left-3">
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white">IA</Badge>
+                          </div>
+                          <div className="absolute top-3 right-3">
+                            <div className="bg-black/70 text-white px-2 py-1 rounded-full text-xs flex items-center">
+                              <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                              Procesado
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <h4 className="font-semibold text-center">Con IA</h4>
+                      <p className="text-sm text-gray-600 text-center">Modelo: {modelos.find(m => m.id === selectedModel)?.name}</p>
+                    </div>
+
+                    {/* Zapatilla Real */}
+                    <div className="space-y-3">
+                      <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-300"></div>
+                        <div className="relative bg-white rounded-lg p-2 shadow-lg">
+                          <Image
+                            src={modelos.find(m => m.id === selectedModel)?.image || blanca1Img}
+                            alt="Zapatilla Real"
+                            width={300}
+                            height={320}
+                            className="w-full h-80 object-cover rounded-md"
+                          />
+                          <div className="absolute top-3 left-3">
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white">Producto</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <h4 className="font-semibold text-center">Zapatilla Real</h4>
+                      <p className="text-sm text-gray-600 text-center">Producto final</p>
+                    </div>
+                  </div>
+
+                  {/* Información adicional */}
+                  <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-6 mt-6">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mr-3">
+                        <Eye className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-orange-800">Análisis Completado</h4>
+                        <div className="flex items-center mt-1">
+                          <span className="text-sm text-orange-600 mr-2">Coincidencia de estilo:</span>
+                          <div className="bg-orange-200 rounded-full h-2 w-20 overflow-hidden">
+                            <div className="bg-gradient-to-r from-orange-500 to-red-500 h-full rounded-full transition-all duration-1000" style={{width: '94%'}}></div>
+                          </div>
+                          <span className="text-sm font-semibold text-orange-700 ml-2">94%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <h5 className="font-medium text-orange-800 mb-2 flex items-center">
+                          <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
+                          Recomendaciones de IA:
+                        </h5>
+                        <ul className="text-sm text-orange-700 space-y-1">
+                          <li className="flex items-center">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+                            Color recomendado: {colores.find(c => c.value === selectedColor)?.name}
+                          </li>
+                          <li className="flex items-center">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+                            Estilo compatible con tu outfit
+                          </li>
+                          <li className="flex items-center">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+                            Combinación perfecta detectada
+                          </li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-orange-800 mb-2 flex items-center">
+                          <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                          Detalles técnicos:
+                        </h5>
+                        <ul className="text-sm text-orange-700 space-y-1">
+                          <li className="flex items-center">
+                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                            Modelo: {modelos.find(m => m.id === selectedModel)?.name}
+                          </li>
+                          <li className="flex items-center">
+                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                            Confianza de IA: 94%
+                          </li>
+                          <li className="flex items-center">
+                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                            Tiempo de procesamiento: 2.3s
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botones de acción */}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                    <Button 
+                      className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 transition-all duration-200"
+                      onClick={() => {
+                        closeImageComparison()
+                        // Aquí podrías añadir al carrito automáticamente
+                      }}
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Me gusta, añadir al carrito
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 hover:bg-orange-50 hover:border-orange-300 transition-all duration-200"
+                      onClick={() => {
+                        // Simular nueva imagen
+                        setImageComparisonStep(1)
+                        setTimeout(() => setImageComparisonStep(2), 2000)
+                      }}
+                    >
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      Probar otra imagen
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="hover:bg-gray-50 transition-colors"
+                      onClick={closeImageComparison}
+                    >
+                      Cerrar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
