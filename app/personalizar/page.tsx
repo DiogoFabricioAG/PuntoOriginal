@@ -36,6 +36,8 @@ export default function PersonalizarPage() {
   const [showImageComparison, setShowImageComparison] = useState(false)
   const [isProcessingIA, setIsProcessingIA] = useState(false)
   const [imageComparisonStep, setImageComparisonStep] = useState(0) // 0: inicial, 1: procesando, 2: resultado
+  const [showEnlargedImage, setShowEnlargedImage] = useState(false)
+  const [enlargedImageSrc, setEnlargedImageSrc] = useState("")
 
   const modelos = [
     {
@@ -111,6 +113,18 @@ export default function PersonalizarPage() {
     setShowImageComparison(false)
     setImageComparisonStep(0)
     setIsProcessingIA(false)
+  }
+
+  // Función para agrandar imagen
+  const handleImageClick = (imageSrc: string) => {
+    setEnlargedImageSrc(imageSrc)
+    setShowEnlargedImage(true)
+  }
+
+  // Función para cerrar imagen agrandada
+  const closeEnlargedImage = () => {
+    setShowEnlargedImage(false)
+    setEnlargedImageSrc("")
   }
 
   const handleColorChange = (color: string) => {
@@ -793,7 +807,12 @@ export default function PersonalizarPage() {
                             alt="Procesado con IA"
                             width={300}
                             height={320}
-                            className="w-full h-80 object-cover rounded-md"
+                            className="w-full h-80 object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => handleImageClick(
+                              (selectedModel === "classic" ? blanca1ImgIA : 
+                              selectedModel === "runner" ? negro1ImgIA : 
+                              neon1ImgIA).src
+                            )}
                           />
                           <div className="absolute top-3 left-3">
                             <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white">IA</Badge>
@@ -802,6 +821,12 @@ export default function PersonalizarPage() {
                             <div className="bg-black/70 text-white px-2 py-1 rounded-full text-xs flex items-center">
                               <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
                               Procesado
+                            </div>
+                          </div>
+                          <div className="absolute bottom-3 right-3">
+                            <div className="bg-black/50 text-white px-2 py-1 rounded-full text-xs flex items-center">
+                              <Eye className="w-3 h-3 mr-1" />
+                              Clic para agrandar
                             </div>
                           </div>
                         </div>
@@ -927,6 +952,39 @@ export default function PersonalizarPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para imagen agrandada */}
+      {showEnlargedImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={closeEnlargedImage}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <Image
+              src={enlargedImageSrc}
+              alt="Imagen agrandada con IA"
+              width={800}
+              height={800}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={closeEnlargedImage}
+              className="absolute top-4 right-4 rounded-full bg-white/90 hover:bg-white border-gray-300"
+            >
+              ✕
+            </Button>
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+              <div className="bg-black/70 text-white px-4 py-2 rounded-full text-sm flex items-center">
+                <Eye className="w-4 h-4 mr-2" />
+                Imagen generada con IA - Haz clic fuera para cerrar
+              </div>
             </div>
           </div>
         </div>
