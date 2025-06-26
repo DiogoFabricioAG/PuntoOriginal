@@ -73,6 +73,7 @@ export default function ConcursosPage() {
       status: "active",
       // Fase actual del concurso
       phase: "inscripcion",
+      endDate: "2025-08-01", 
       // Definición de todas las fases para la línea de tiempo
       phases: [
         { name: "Inscripción", status: "active", date: "Jun 24, 2025" },
@@ -93,6 +94,7 @@ export default function ConcursosPage() {
       image: urbanoImg,
       status: "active",
       phase: "votacion",
+      endDate: "2025-07-10",
       phases: [
         { name: "Inscripción", status: "completed", date: "May 15, 2025" },
         { name: "Votación", status: "active", date: "Jun 15, 2025" },
@@ -264,9 +266,12 @@ export default function ConcursosPage() {
   const getDaysRemaining = (endDate: string) => {
     const end = new Date(endDate);
     const now = new Date();
+    // Ajuste para ignorar la hora y comparar solo días completos
+    end.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
     const diffTime = end.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
+    return diffDays >= 0 ? diffDays : 0;
   };
 
   // Lógica para manejar la votación (simulada)
@@ -327,7 +332,7 @@ export default function ConcursosPage() {
                 </div>
                 <div className="flex items-center">
                   <Clock className="w-6 h-6 mr-2 text-blue-500" />{" "}
-                  {getDaysRemaining(selectedContest.phase)} días restantes
+                  {getDaysRemaining(selectedContest.endDate)} días restantes
                 </div>
               </div>
 
@@ -549,7 +554,7 @@ export default function ConcursosPage() {
                                             <Badge variant="outline">{concurso.phase === 'inscripcion' ? 'Inscripción' : 'Votación'}</Badge>
                                             <div className="flex items-center text-sm text-gray-500">
                                                 <Clock className="w-4 h-4 mr-1" />
-                                                {getDaysRemaining(concurso.phase)} días restantes
+                                                {getDaysRemaining(concurso.endDate)} días restantes
                                             </div>
                                         </div>
                                         <h3 className="text-xl font-semibold text-gray-900 mb-2">{concurso.title}</h3>
